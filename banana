@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+import subprocess
+import socket
+import shlex
+import urllib2
+import json
+import os
+
+result = subprocess.check_output(shlex.split("/usr/sbin/system_profiler SPHardwareDataType"))
+result_elements = [ x.split(':') for x in result.splitlines()[4:-1] ]
+element_hash = {
+    filter(
+        str.isalnum, ''.join( # getting rid of non alphanumerics
+            map(str.lower, e[0].split()) # downcasing and removing spaces
+        )
+    ) : e[1].strip() for e in result_elements # building hash out of [[][]]
+}
+hdd = os.statvfs('/')
+element_hash['hostname'] = socket.gethostname()
+element_hash['diskfree'] = str((hdd.f_frsize * hdd.f_bavail) / 1024 / 1024 / 1024) + " GB"
+element_hash['disktotal'] = str((hdd.f_blocks * hdd.f_frsize) / 1024 / 1024 / 1024) + " GB"
+element_hash['encryption'] = subprocess.check_output(shlex.split("/usr/bin/fdesetup isactive")).strip() == "true"
+url = "http://gorilla.qck.cm/i/{}".format(element_hash['serialnumbersystem'])
+post_data = json.dumps(element_hash)
+try:
+    req = urllib2.Request(url, post_data, { 'Content-Type': 'application/json' })
+    result = urllib2.urlopen(req)
+except Exception, e:
+    print str(e)
+    exit(1)
