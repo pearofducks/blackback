@@ -31,4 +31,4 @@
       /usr/local/gorilla/blackback/banana
   - name: run munki
     shell: >
-      /usr/local/munki/managedsoftwareupdate -a
+      /usr/local/munki/managedsoftwareupdate -a && managedsoftwareupdate --installwithnologout
