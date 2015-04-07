@@ -6,15 +6,6 @@
     manifestURL: http://gorilla.qck.cm/manifest
     softwareURL: http://gorilla.qck.cm/
   tasks:
-  - name: create directory for special ansible facts
-    file: >
-      state=directory
-      path=/etc/ansible/facts.d
-  - name: install special ansible facts
-    file: >
-      state=link
-      src=/usr/local/gorilla/blackback/mac.fact
-      dest=/etc/ansible/facts.d/mac.fact
   - name: install munki
     osx: >
       url=http://qck.cm/munkitools-2.2.4.2431.pkg
