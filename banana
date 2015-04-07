@@ -20,7 +20,10 @@ hdd = os.statvfs('/')
 element_hash['hostname'] = socket.gethostname()
 element_hash['diskfree'] = str((hdd.f_frsize * hdd.f_bavail) / 1024 / 1024 / 1024) + " GB"
 element_hash['disktotal'] = str((hdd.f_blocks * hdd.f_frsize) / 1024 / 1024 / 1024) + " GB"
-element_hash['encryption'] = subprocess.check_output(shlex.split("/usr/bin/fdesetup isactive")).strip() == "true"
+try:
+    element_hash['encryption'] = subprocess.check_output(shlex.split("/usr/bin/fdesetup isactive")).strip() == "true"
+except subprocess.CalledProcessError:
+    element_hash['encryption'] = False
 url = "http://gorilla.qck.cm/i/{}".format(element_hash['serialnumbersystem'])
 post_data = json.dumps(element_hash)
 try:
