@@ -6,6 +6,24 @@
     manifestURL: http://gorilla.qck.cm/manifest
     softwareURL: http://gorilla.qck.cm/
   tasks:
+  - name: passwords
+    shell: pwpolicy getglobalpolicy | grep -o 'minChars=\d' | awk -F= '{print $2}'
+    register: current_passlength_required
+  - name: set password policy to 8 characters
+    shell: >
+      pwpolicy setglobalpolicy "minChars=8 newPasswordRequired=1" && \
+      mkdir /tmp/keychains && \
+      cp ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/*.keychain /tmp/keychains/ && \
+      rm -r ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/* && \
+      cp /tmp/keychains/*.keychain ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/ && \
+      rm -rf /tmp/keychains
+    when: current_passlength_required.stdout|int < 2
+  - name: filevault
+    shell: fdesetup isactive
+    register: filevault_status
+  - name: enable filevault
+    shell: /usr/bin/fdesetup enable -defer /usr/local/chordata/fvk
+    when: filevault_status.rc|int != 0
   - name: install munki
     osx: >
       url=http://qck.cm/munkitools-2.2.4.2431.pkg
@@ -19,7 +37,7 @@
       group=wheel
   - name: check in with gorilla
     shell: >
-      /usr/local/gorilla/blackback/banana
+      /usr/local/chordata/anatida/quack
   - name: run munki
     shell: >
       /usr/local/munki/managedsoftwareupdate -a && /usr/local/munki/managedsoftwareupdate --installwithnologout
