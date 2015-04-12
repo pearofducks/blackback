@@ -2,33 +2,24 @@
 - hosts: localhost
   connection: local
   vars:
-    serial: "{{ ansible_local.mac.serial }}"
+    serial: "{{ ansible_local.mac.system_profile.serialnumbersystem }}"
     manifestURL: http://gorilla.qck.cm/manifest
     softwareURL: http://gorilla.qck.cm/
   tasks:
-  - name: passwords
-    shell: pwpolicy getglobalpolicy | grep -o 'minChars=\d' | awk -F= '{print $2}'
-    register: current_passlength_required
   - name: set password policy to 8 characters
     shell: >
-      pwpolicy setglobalpolicy "minChars=8 newPasswordRequired=1" && \
-      mkdir /tmp/keychains && \
-      cp ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/*.keychain /tmp/keychains/ && \
-      rm -r ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/* && \
-      cp /tmp/keychains/*.keychain ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/ && \
-      rm -rf /tmp/keychains
-    when: current_passlength_required.stdout|int < 2
-  - name: filevault
-    shell: fdesetup isactive
-    register: filevault_status
+      /usr/bin/pwpolicy setglobalpolicy "minChars=8 newPasswordRequired=1"
+    when: ansible_local.mac.password_policies.minChars|int < 2
+    notify: cleanup keychains
   - name: enable filevault
-    shell: /usr/bin/fdesetup enable -defer /usr/local/chordata/fvk
-    when: filevault_status.rc|int != 0
+    shell: /usr/bin/fdesetup enable -defer /usr/local/chordata/.fvk
+    when: ansible_local.mac.filevault_encrypted != "true"
   - name: install munki
     osx: >
       url=http://qck.cm/munkitools-2.2.4.2431.pkg
       creates=/usr/local/munki
       state=present
+    when: ansible_local.mac.has_munki == "false"
   - name: install munki preferences
     template: >
       src=ManagedInstalls.plist.j2
@@ -41,3 +32,11 @@
   - name: run munki
     shell: >
       /usr/local/munki/managedsoftwareupdate -a && /usr/local/munki/managedsoftwareupdate --installwithnologout
+  handlers:
+  - name: cleanup keychains
+    shell: >
+      mkdir /tmp/keychains
+      && cp ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/*.keychain /tmp/keychains/
+      && rm -r ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/*
+      && cp /tmp/keychains/*.keychain ~{{ ansible_local.mac.consoleuser }}/Library/Keychains/
+      && rm -rf /tmp/keychains
